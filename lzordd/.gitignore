@@ -1,0 +1,38 @@
+# sbt
+# (may want to keep parts of ‘project’)
+bin/
+project/*
+!project/*.sbt
+!project/build.properties
+target/
+build/
+resources/
+docs/
+lib/
+
+# eclipse
+build
+.classpath
+.project
+.settings
+.worksheet
+
+# intellij idea
+*.log
+*.iml
+*.ipr
+*.iws
+.idea
+.bsp/
+
+# mac
+.DS_Store
+
+# other?
+.history
+.scala_dependencies
+.cache
+.cache-main
+
+#general
+*.class

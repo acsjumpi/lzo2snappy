@@ -36,7 +36,7 @@ lazy val root = (project in file("."))
       case _ => MergeStrategy.first
     },
     assemblyShadeRules in assembly := Seq(
-      ShadeRule.rename("com.chuusai.shapeless.**" -> "shade.com.chuusai.shapeless.@1").inAll
+      ShadeRule.rename("shapeless.**" -> "shade_shapeless.@1").inAll
     ),
     test in assembly := {}
   )
