@@ -11,9 +11,9 @@ object lzordd extends App {
       val tableName = args(2)
       val delimiter = args(3)
 
-      val read = readLzo(sc, inputPath)
-      createAndWriteSnappy(read, outputPath)
-      readAndCreateTable(spark, tableName, outputPath, delimiter)
+      val read = readLzo(sc, inputPath, delimiter)
+      val tableSchema = createAndWriteSnappy(spark, tableName, read, outputPath)
+      readAndCreateTable(spark, tableSchema, tableName, outputPath)
 
     //read.collect().foreach(println)
 }
