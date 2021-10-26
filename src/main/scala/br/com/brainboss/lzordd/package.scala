@@ -24,7 +24,6 @@ package object lzordd {
       classOf[org.apache.hadoop.io.Text])
 
     println(s"Input LZO from: $inputPath")
-
     // Split text by delimiter
     files.map(_._2.toString.split(delimiter))
   }
