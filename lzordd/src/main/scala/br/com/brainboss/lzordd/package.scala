@@ -22,7 +22,7 @@ package object lzordd {
       classOf[org.apache.hadoop.io.Text])
 
     println(s"LZO lido de: $inputPath")
-//    Split text by delimiter
+    // Split text by delimiter
     files.map(_._2.toString.split(delimiter))
   }
   
@@ -57,7 +57,7 @@ package object lzordd {
     val vcc = ValueCodecConfiguration(TimeZone.getTimeZone(ZoneOffset.UTC))
     val parquetRecords = lzoRdd.map(recordFields => {
       recordFields.zipWithIndex.foldLeft(RowParquetRecord.empty)((parquetRecord, recordField) => {
-        val value = filteredTableSchema(recordField._2).get(0) match {
+        val value = if (recordField._1.length == 0) null else filteredTableSchema(recordField._2).get(0) match {
           case "int" => recordField._1.toInt
           case "bigint" => recordField._1.toLong
           case "float" => recordField._1.toFloat
