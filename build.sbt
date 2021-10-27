@@ -5,15 +5,15 @@ lazy val root = (project in file("."))
       scalaVersion := "2.11.12",
       version      := "0.0.1"
     )),
-    name := "lzordd",
+    name := "l2s",
     resolvers ++= Seq("twttr.com" at "https://maven.twttr.com/"),
     libraryDependencies ++= Seq("com.hadoop.gplcompression" % "hadoop-lzo" % "0.4.17",
       "org.apache.spark" %% "spark-core" % "2.4.0" %"provided",
       "org.apache.spark" %% "spark-sql" % "2.4.0" %"provided",
-      "com.github.mjakubowski84" %% "parquet4s-core" % "1.9.2",
+      "com.github.mjakubowski84" %% "parquet4s-core" % "1.9.4",
       "org.apache.hadoop" % "hadoop-client" % "3.0.0" %"provided",
     ),
-    assemblyJarName in assembly := "lzordd.jar",
+    assemblyJarName in assembly := "l2s.jar",
     assemblyMergeStrategy in assembly := {
       case x if Assembly.isConfigFile(x) =>
         MergeStrategy.concat
