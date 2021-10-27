@@ -4,7 +4,7 @@ import org.apache.spark.sql.SparkSession
 
 object lzodf extends App {
   val usage = """
-    Usage: lzodf <input-path> <output-path> <table name> [delimiter]
+    Usage: lzodf <source table name> <output-path> <parquet table name>
   """
 
   if (args.length < 3)
@@ -12,15 +12,11 @@ object lzodf extends App {
   else {
     val spark = SparkSession.builder().appName("lzodf").getOrCreate()
 
-    val inputPath = args(0)
+    val srcTableName = args(0)
     val outputPath = args(1)
     val tableName = args(2)
-    val delimiter = if (args.length == 4) args(3) else ","
 
-    val df = spark
-      .read
-      .option("delimiter", delimiter)
-      .csv(inputPath)
+    val df = spark.sql(s"SELECT * FROM ${srcTableName}")
 
     df.show(10)
 
