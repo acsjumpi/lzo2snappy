@@ -22,10 +22,10 @@ l2s <lzo file location> <parquet file destination> <original_table_name> <delimi
 
 Where: 
 
-- <lzo file location> : Where lzo files are located
-- <parquet/snappy file destination> : What is the location are new files need to be placed
-- <original table name> : The name of the original table
-- <delimiter> : The delimiter used to create the original table
+- `<lzo file location>` : Where lzo files are located
+- `<parquet/snappy file destination>` : What is the location are new files need to be placed
+- `<original table name>` : The name of the original table
+- `<delimiter>` : The delimiter used to create the original table
 
 RDD execution example:
 
@@ -43,8 +43,8 @@ l2s <lzo file location> <table destination>
 
 Where: 
 
-- <lzo file location> : Where lzo files are located
-- <table destination> : What is the location are new files need to be placed
+- `<lzo file location>` : Where lzo files are located
+- `<table destination>` : What is the location are new files need to be placed
 
 Dataframe execution example: 
 
