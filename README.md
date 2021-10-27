@@ -18,7 +18,7 @@ l2s <lzo file location> <parquet file destination> <original_table_name> <delimi
 
 '''
 $ spark-submit --class br.com.brainboss.lzordd.lzordd l2s.jar /user/hive/warehouse/hive_lzo /user/hive/warehouse/snappy_test hive_lzo ,
-''''
+'''
 
 ### Dataframe strategy
 
