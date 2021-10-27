@@ -4,7 +4,7 @@ import org.apache.spark.sql.SparkSession
 
 object lzordd extends App {
   val usage = """
-    Usage: lzordd <input-path> <output-path> <table name> [delimiter]
+    Usage: lzordd <lzo file location> <parquet/snappy file destination> <original table name> [delimiter]
   """
 
   if (args.length < 3)
