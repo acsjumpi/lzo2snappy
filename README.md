@@ -14,7 +14,7 @@ This project depends of lzo support enabled in your cluster, the instructions ar
 
 ### RDD strategy
 
-#### l2s <lzo file location> <parquet file destination> <original_table_name> <delimiter> 
+l2s <lzo file location> <parquet file destination> <original_table_name> <delimiter> 
 
 '''
 $ spark-submit --class br.com.brainboss.lzordd.lzordd l2s.jar /user/hive/warehouse/hive_lzo /user/hive/warehouse/snappy_test hive_lzo ,
@@ -22,7 +22,7 @@ $ spark-submit --class br.com.brainboss.lzordd.lzordd l2s.jar /user/hive/warehou
 
 ### Dataframe strategy
 
-#### l2s <lzo file location> <table destination>
+l2s <lzo file location> <table destination>
 
 '''
 $ spark-submit --class br.com.brainboss.lzodf.lzodf l2s.jar /user/hive/warehouse/hive_lzo snappy_hive_lzo
