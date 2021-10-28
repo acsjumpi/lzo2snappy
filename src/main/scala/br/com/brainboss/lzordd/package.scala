@@ -60,11 +60,11 @@ package object lzordd {
     // Casting data and creating parquet records
     val vcc = ValueCodecConfiguration(TimeZone.getTimeZone(ZoneOffset.UTC))
     val parquetRecords = lzoRdd.map(recordFields => {
-      recordFields.zipWithIndex.foldLeft(RowParquetRecord.empty)((parquetRecord, recordField) => {
-        println(s"Table Schema output: ${filteredTableSchema(recordField._2).get(1)}")
-        val value = if (recordField._1.length == 0)
-          parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), "", vcc)
-        else filteredTableSchema(recordField._2).get(1) match {
+      recordFields
+        .filter((recordField) => recordField.length > 0)
+        .zipWithIndex.foldLeft(RowParquetRecord.empty)((parquetRecord, recordField) => {
+
+        val value = filteredTableSchema(recordField._2).get(1) match {
           case "int" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toInt, vcc)
           case "bigint" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toLong, vcc)
           case "float" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toFloat, vcc)
@@ -77,18 +77,17 @@ package object lzordd {
 
     // Each worker writes its on parquet records, so we don't need to collect RDD
     parquetRecords.foreachPartition(workerParquetRecords => {
-
       // Set parquet schema
       implicit val schema = createParquetSchema(filteredTableSchema)
-
+  
       // Create parquet/snappy raw file
       ParquetWriter.writeAndClose(
         s"$outputPath/data.parquet",
         workerParquetRecords.toList,
         Options(compressionCodecName = CompressionCodecName.SNAPPY)
       )
-    }
-  )
+    })
+
     println(s"Parquet file generated at: $outputPath")
     filteredTableSchema
   }
