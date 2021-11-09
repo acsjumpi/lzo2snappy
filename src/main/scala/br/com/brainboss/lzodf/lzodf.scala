@@ -3,20 +3,25 @@ package br.com.brainboss.lzodf
 import org.apache.spark.sql.SparkSession
 
 object lzodf extends App {
-  val spark = SparkSession.builder().appName("lzodf").getOrCreate()
+  val usage = """
+    Usage: lzodf <parquet/snappy file destination> <original table name>
+  """
 
-  val inputPath = args(0)
-  val outputPath = args(1)
+  if (args.length < 2)
+    println(usage)
+  else {
+    val spark = SparkSession.builder().appName("lzodf").getOrCreate()
 
-  //spark.conf.set("spark.sql.parquet.compression.codec","codec")
-  val df = spark.read.csv(inputPath)
+    val outputPath = args(0)
+    val tableName = args(1)
 
-  df.show(10)
+    val df = spark.sql(s"SELECT * FROM ${tableName}")
 
-  df
-    .write.mode(org.apache.spark.sql.SaveMode.Overwrite)
-    .option("compression", "snappy")
-    .format("parquet")
-    .saveAsTable(outputPath)
-
+    df
+      .write.mode(org.apache.spark.sql.SaveMode.Overwrite)
+      .option("compression", "snappy")
+      .option("path", outputPath)
+      .format("parquet")
+      .saveAsTable(s"${tableName}_snappy")
+  }
 }
