@@ -1,15 +1,15 @@
 package br.com.brainboss
 
 import br.com.brainboss.util.hashStr
-import com.github.mjakubowski84.parquet4s.{ParquetReader, ParquetWriter, RowParquetRecord, ValueCodecConfiguration}
 import com.github.mjakubowski84.parquet4s.ParquetWriter.Options
+import com.github.mjakubowski84.parquet4s.{ParquetWriter, RowParquetRecord, ValueCodecConfiguration}
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
+import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName._
+import org.apache.parquet.schema.Type.Repetition.OPTIONAL
 import org.apache.parquet.schema.{LogicalTypeAnnotation, Types}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.{BINARY, DOUBLE, FLOAT, INT32, INT64}
-import org.apache.parquet.schema.Type.Repetition.OPTIONAL
 
 import java.time.ZoneOffset
 import java.util.TimeZone

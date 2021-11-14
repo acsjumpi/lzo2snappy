@@ -1,7 +1,8 @@
 package br.com.brainboss.lzodf
 
+import br.com.brainboss.util.hashAndSum
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.{avg, col, concat_ws, sum}
+import org.apache.spark.sql.functions.{col, concat_ws, sum}
 
 object lzodf extends App {
   val usage = """
@@ -20,7 +21,7 @@ object lzodf extends App {
     val columns = df.columns.map(colName => col(colName))
     
     val hashColumns = df.withColumn("checksum", hashUdf(concat_ws(",", columns:_*)))
-    val hashSum = hashColumns.select(sum("checksum") as "hash_sum").head()
+    val hashSum = hashColumns.select(sum("checksum") as "hash_sum").head().getAs[Int]("hash_sum")
 
     df
       .write.mode(org.apache.spark.sql.SaveMode.Overwrite)
@@ -29,13 +30,10 @@ object lzodf extends App {
       .format("parquet")
       .saveAsTable(s"${tableName}_snappy")
     
-    val hashSumSnappy = spark.sql(s"SELECT * FROM ${tableName}_snappy")
-      .withColumn("checksum", hashUdf(concat_ws(",", columns:_*)))
-      .select(sum("checksum") as "hash_sum")
-      .head()
+    val hashSumSnappy = hashAndSum(spark, s"${tableName}_snappy", columns)
     
-    if (hashSum.getAs[Int]("hash_sum") != hashSumSnappy.getAs[Int]("hash_sum")) {
-//      TODO: Rollback
+    if (hashSum != hashSumSnappy) {
+      // TODO: Rollback
     }
   }
 }
