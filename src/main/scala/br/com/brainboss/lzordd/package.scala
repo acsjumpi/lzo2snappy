@@ -1,21 +1,22 @@
 package br.com.brainboss
 
-import com.github.mjakubowski84.parquet4s.{ParquetWriter, RowParquetRecord, ValueCodecConfiguration}
+import br.com.brainboss.util.hashStr
 import com.github.mjakubowski84.parquet4s.ParquetWriter.Options
+import com.github.mjakubowski84.parquet4s.{ParquetWriter, RowParquetRecord, ValueCodecConfiguration}
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
+import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName._
+import org.apache.parquet.schema.Type.Repetition.OPTIONAL
 import org.apache.parquet.schema.{LogicalTypeAnnotation, Types}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.{BINARY, DOUBLE, FLOAT, INT32, INT64}
-import org.apache.parquet.schema.Type.Repetition.OPTIONAL
 
 import java.time.ZoneOffset
 import java.util.TimeZone
 
 
 package object lzordd {
-  def readLzo (sc:SparkContext, inputPath:String, delimiter: String) = {
+  def readLzo(sc:SparkContext, inputPath:String, delimiter: String) = {
 
     // Read LZO files
     val files = sc.newAPIHadoopFile( s"$inputPath/*.lzo",
@@ -26,6 +27,12 @@ package object lzordd {
     println(s"Input LZO from: $inputPath")
     // Split text by delimiter
     files.map(_._2.toString.split(delimiter))
+  }
+  
+  def createHashSum(lzoRdd:RDD[Array[String]]) = {
+    lzoRdd
+      .map(row => hashStr(row.mkString(",")))
+      .reduce(_ + _)
   }
   
   def createParquetSchema(tableSchema: Array[Row]) = {
@@ -87,12 +94,12 @@ package object lzordd {
         Options(compressionCodecName = CompressionCodecName.SNAPPY)
       )
     })
-
+    
     println(s"Parquet file generated at: $outputPath")
     filteredTableSchema
   }
 
-  def readAndCreateTable (ss: SparkSession, tableSchema: Array[Row], tableName:String, outputPath:String) = {
+  def createTable (ss: SparkSession, tableSchema: Array[Row], tableName:String, outputPath:String) = {
 
     // get table fields from generated schema
     val tableFields = tableSchema.map(r=>s"${r.get(0)} ${r.get(1)}").mkString(",")

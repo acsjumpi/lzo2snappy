@@ -1,6 +1,8 @@
 package br.com.brainboss.lzordd
 
+import br.com.brainboss.util.hashAndSum
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions.col
 
 object lzordd extends App {
   val usage = """
@@ -18,14 +20,21 @@ object lzordd extends App {
     val tableName = args(2)
     val delimiter = if (args.length == 4) args(3) else ","
 
-    // TODO: Need to catch the correct exceptions
+    // TODO: Needs to catch the correct exceptions
     try {
 
       val read = readLzo(sc, inputPath, delimiter)
+      val hashSum = createHashSum(read)
       val tableSchema = createAndWriteSnappy(spark, tableName, read, outputPath)
 
-      readAndCreateTable(spark, tableSchema, tableName, outputPath)
+      createTable(spark, tableSchema, tableName, outputPath)
 
+      val columns = tableSchema.map((field) => col(field.getAs[String](0)))
+      val hashSumSnappy = hashAndSum(spark, s"${tableName}_snappy", columns)
+
+      if (hashSum != hashSumSnappy) {
+        // TODO: Rollback
+      }
     } catch {
       case e: Exception => e.printStackTrace()
     }
