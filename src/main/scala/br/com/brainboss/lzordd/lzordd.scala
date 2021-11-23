@@ -1,6 +1,6 @@
 package br.com.brainboss.lzordd
 
-import br.com.brainboss.util.hashAndSum
+import br.com.brainboss.util.{IncompatibleTablesException, hashAndSum, rollback}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.col
 
@@ -22,7 +22,6 @@ object lzordd extends App {
 
     // TODO: Needs to catch the correct exceptions
     try {
-
       val read = readLzo(sc, inputPath, delimiter)
       val hashSum = createHashSum(read)
       val tableSchema = createAndWriteSnappy(spark, tableName, read, outputPath)
@@ -33,10 +32,13 @@ object lzordd extends App {
       val hashSumSnappy = hashAndSum(spark, s"${tableName}_snappy", columns)
 
       if (hashSum != hashSumSnappy) {
-        // TODO: Rollback
+        throw IncompatibleTablesException("LZO and Snappy tables are incompatible. Rolling back changes.")
       }
     } catch {
-      case e: Exception => e.printStackTrace()
+      case e: Exception => {
+        rollback(spark, tableName, outputPath, spark.sparkContext.hadoopConfiguration)
+        e.printStackTrace()
+      }
     }
   }
 }
