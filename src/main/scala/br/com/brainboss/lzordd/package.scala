@@ -32,6 +32,7 @@ package object lzordd {
   
   def createHashSum(lzoRdd:RDD[Array[String]]) = {
     lzoRdd
+      .map(row => row.filter(field => !field.equals("\\N") && field.length > 0))
       .map(row => hashStr(row.mkString(",")).toLong)
       .reduce(_ + _)
   }
@@ -69,18 +70,18 @@ package object lzordd {
     val vcc = ValueCodecConfiguration(TimeZone.getTimeZone(ZoneOffset.UTC))
     val parquetRecords = lzoRdd.map(recordFields => {
       recordFields
-        .filter((recordField) => recordField.length > 0)
-        .zipWithIndex.foldLeft(RowParquetRecord.empty)((parquetRecord, recordField) => {
-
-        val value = filteredTableSchema(recordField._2).get(1) match {
-          case "int" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toInt, vcc)
-          case "bigint" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toLong, vcc)
-          case "float" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toFloat, vcc)
-          case "double" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toDouble, vcc)
-          case _ => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1, vcc)
-        }
-        value
-      })
+        .zipWithIndex
+        .filter((recordField) => recordField._1.length > 0 && !recordField._1.equals("\\N"))
+        .foldLeft(RowParquetRecord.empty)((parquetRecord, recordField) => {
+          val value = filteredTableSchema(recordField._2).get(1) match {
+            case "int" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toInt, vcc)
+            case "bigint" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toLong, vcc)
+            case "float" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toFloat, vcc)
+            case "double" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toDouble, vcc)
+            case _ => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1, vcc)
+          }
+          value
+        })
     })
 
     // Each worker writes its on parquet records, so we don't need to collect RDD
