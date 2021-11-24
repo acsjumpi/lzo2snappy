@@ -10,6 +10,7 @@ import org.apache.parquet.schema.{LogicalTypeAnnotation, Types}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.TaskContext
 
 import java.time.ZoneOffset
 import java.util.TimeZone
@@ -31,7 +32,7 @@ package object lzordd {
   
   def createHashSum(lzoRdd:RDD[Array[String]]) = {
     lzoRdd
-      .map(row => hashStr(row.mkString(",")))
+      .map(row => hashStr(row.mkString(",")).toLong)
       .reduce(_ + _)
   }
   
@@ -89,7 +90,7 @@ package object lzordd {
   
       // Create parquet/snappy raw file
       ParquetWriter.writeAndClose(
-        s"$outputPath/data.parquet",
+        s"$outputPath/data_${TaskContext.getPartitionId()}.parquet",
         workerParquetRecords.toList,
         Options(compressionCodecName = CompressionCodecName.SNAPPY)
       )

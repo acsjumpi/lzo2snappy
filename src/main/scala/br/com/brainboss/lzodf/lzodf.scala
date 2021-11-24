@@ -1,6 +1,6 @@
 package br.com.brainboss.lzodf
 
-import br.com.brainboss.util.{IncompatibleTablesException, hashAndSum, rollback}
+import br.com.brainboss.util.{IncompatibleTablesException, getOutputFile, hashAndSum, rollback}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.{col, concat_ws, sum}
 
@@ -16,7 +16,8 @@ object lzodf extends App {
 
     val outputPath = args(0)
     val tableName = args(1)
-    
+    val outputFile = getOutputFile(outputPath, tableName)
+
     try {
       val df = spark.sql(s"SELECT * FROM ${tableName}")
       val columns = df.columns.map(colName => col(colName))
@@ -25,11 +26,11 @@ object lzodf extends App {
       //TODO - Need to implement log level to show checksum column
       //hashColumns.show(10)
       val hashSum = hashColumns.select(sum("checksum") as "hash_sum").head().getAs[Long]("hash_sum")
-
+      
       df
         .write.mode(org.apache.spark.sql.SaveMode.Overwrite)
         .option("compression", "snappy")
-        .option("path", outputPath)
+        .option("path", outputFile)
         .format("parquet")
         .saveAsTable(s"${tableName}_snappy")
 
@@ -40,7 +41,7 @@ object lzodf extends App {
       }
     } catch {
       case e: Exception => {
-        rollback(spark, tableName, outputPath, spark.sparkContext.hadoopConfiguration)
+        rollback(spark, tableName, outputFile, spark.sparkContext.hadoopConfiguration)
         e.printStackTrace()
       }
     }
