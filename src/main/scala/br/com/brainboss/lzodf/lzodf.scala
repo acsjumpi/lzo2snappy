@@ -22,6 +22,8 @@ object lzodf extends App {
       val columns = df.columns.map(colName => col(colName))
 
       val hashColumns = df.withColumn("checksum", hashUdf(concat_ws(",", columns:_*)))
+      //TODO - Need to implement log level to show checksum column
+      //hashColumns.show(10)
       val hashSum = hashColumns.select(sum("checksum") as "hash_sum").head().getAs[Long]("hash_sum")
 
       df

@@ -5,14 +5,19 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.functions.{col, concat_ws, sum, udf}
 import org.apache.spark.sql.{Column, SparkSession}
-
+import scala.util.hashing.MurmurHash3
 import java.net.URI
 
 package object util {
+  // Auxiliary function to guarantee only positive hash from MurmurHash3 return
+  def positiveHash(h: Int): Int = {
+    if (h < 0) -1 * (h + 1) else h
+  }
+
   def hashStr (str: String): Int = {
-    // TODO: Replace with hash function
-    val hash = str
-    hash.hashCode
+    // Uses MurmurHash3 (very fast and lower collision rate)
+    val hash = MurmurHash3.stringHash(str)
+    positiveHash(hash)
   }
 
   def hashAndSum(ss: SparkSession, tableName: String, columns: Array[Column]): Long ={
