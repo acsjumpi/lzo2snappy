@@ -28,6 +28,13 @@ package object util {
       .getAs[Long]("hash_sum")
   }
   
+  def getOutputFile(outputPath: String, tableName: String): String = {
+    if (outputPath.last.equals('/'))
+      s"$outputPath${tableName}_snappy"
+    else
+      s"$outputPath/${tableName}_snappy"
+  }
+  
   def rollback(ss: SparkSession, tableName: String, path: String, conf: Configuration): Unit = {
     val fs = FileSystem.get(URI.create(path), conf)
     
