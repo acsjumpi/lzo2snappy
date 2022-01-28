@@ -1,7 +1,6 @@
 package br.com.brainboss.lzordd
 
-import br.com.brainboss.util.{IncompatibleTablesException, getOutputFile, hashAndSum, rollback}
-import org.apache.spark.sql.SparkSession
+import br.com.brainboss.util._
 import org.apache.spark.sql.functions.col
 
 object lzordd extends App {
@@ -12,7 +11,8 @@ object lzordd extends App {
   if (args.length < 3)
     println(usage)
   else {
-    val spark = SparkSession.builder().appName("lzordd").getOrCreate()
+    val spark = startSession()
+
     val sc = spark.sparkContext
 
     val inputPath = args(0)
@@ -21,15 +21,15 @@ object lzordd extends App {
     val delimiter = if (args.length == 4) args(3) else ","
     val outputFile = getOutputFile(outputPath, tableName)
 
-    // TODO: Needs to catch the correct exceptions
     try {
       val read = readLzo(sc, inputPath, delimiter)
+
       val hashSum = createHashSum(read)
       val tableSchema = createAndWriteSnappy(spark, tableName, read, outputFile)
 
       createTable(spark, tableSchema, tableName, outputFile)
 
-      val columns = tableSchema.map((field) => col(field.getAs[String](0)))
+      val columns = tableSchema.map(field => col(field.getAs[String](0)))
       val hashSumSnappy = hashAndSum(spark, s"${tableName}_snappy", columns)
 
       if (hashSum != hashSumSnappy) {
@@ -40,6 +40,8 @@ object lzordd extends App {
         rollback(spark, tableName, outputFile, spark.sparkContext.hadoopConfiguration)
         e.printStackTrace()
       }
+    } finally {
+      spark.close()
     }
   }
 }

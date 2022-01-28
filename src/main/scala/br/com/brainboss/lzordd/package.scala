@@ -1,16 +1,15 @@
 package br.com.brainboss
 
-import br.com.brainboss.util.hashStr
+import br.com.brainboss.util.{getTableSchema, hashStr}
 import com.github.mjakubowski84.parquet4s.ParquetWriter.Options
 import com.github.mjakubowski84.parquet4s.{ParquetWriter, RowParquetRecord, ValueCodecConfiguration}
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName._
 import org.apache.parquet.schema.Type.Repetition.OPTIONAL
 import org.apache.parquet.schema.{LogicalTypeAnnotation, Types}
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkContext, TaskContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.TaskContext
 
 import java.time.ZoneOffset
 import java.util.TimeZone
@@ -61,10 +60,9 @@ package object lzordd {
     Types.buildMessage().addFields(fields:_*).named("schema")
   }
 
-  def createAndWriteSnappy (ss: SparkSession, tableName: String, lzoRdd:RDD[Array[String]], outputPath:String) ={
+  def createAndWriteSnappy (spark: SparkSession, tableName: String, lzoRdd:RDD[Array[String]], outputPath:String) ={
     // Get table schema
-    val tableSchema = ss.sql(s"DESCRIBE FORMATTED $tableName").collect()
-    val filteredTableSchema = tableSchema.takeWhile(l=>l.getAs[String]("col_name").length > 0)
+    val tableSchema = getTableSchema(spark, tableName)
 
     // Casting data and creating parquet records
     val vcc = ValueCodecConfiguration(TimeZone.getTimeZone(ZoneOffset.UTC))
@@ -73,12 +71,12 @@ package object lzordd {
         .zipWithIndex
         .filter((recordField) => recordField._1.length > 0 && !recordField._1.equals("\\N"))
         .foldLeft(RowParquetRecord.empty)((parquetRecord, recordField) => {
-          val value = filteredTableSchema(recordField._2).get(1) match {
-            case "int" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toInt, vcc)
-            case "bigint" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toLong, vcc)
-            case "float" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toFloat, vcc)
-            case "double" => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toDouble, vcc)
-            case _ => parquetRecord.add(filteredTableSchema(recordField._2).getAs[String]("col_name"), recordField._1, vcc)
+          val value = tableSchema(recordField._2).get(1) match {
+            case "int" => parquetRecord.add(tableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toInt, vcc)
+            case "bigint" => parquetRecord.add(tableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toLong, vcc)
+            case "float" => parquetRecord.add(tableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toFloat, vcc)
+            case "double" => parquetRecord.add(tableSchema(recordField._2).getAs[String]("col_name"), recordField._1.toDouble, vcc)
+            case _ => parquetRecord.add(tableSchema(recordField._2).getAs[String]("col_name"), recordField._1, vcc)
           }
           value
         })
@@ -87,7 +85,7 @@ package object lzordd {
     // Each worker writes its on parquet records, so we don't need to collect RDD
     parquetRecords.foreachPartition(workerParquetRecords => {
       // Set parquet schema
-      implicit val schema = createParquetSchema(filteredTableSchema)
+      implicit val schema = createParquetSchema(tableSchema)
   
       // Create parquet/snappy raw file
       ParquetWriter.writeAndClose(
@@ -98,20 +96,6 @@ package object lzordd {
     })
     
     println(s"Parquet file generated at: $outputPath")
-    filteredTableSchema
-  }
-
-  def createTable (ss: SparkSession, tableSchema: Array[Row], tableName:String, outputPath:String) = {
-
-    // get table fields from generated schema
-    val tableFields = tableSchema.map(r=>s"${r.get(0)} ${r.get(1)}").mkString(",")
-
-    // create parquet/snappy external table using collected table fields
-    ss.sql(
-      s"""CREATE EXTERNAL TABLE ${tableName}_snappy (${tableFields})
-         |STORED AS PARQUET TBLPROPERTIES (\"parquet.compression\"=\"SNAPPY\")
-         |LOCATION '${outputPath}'""".stripMargin)
-
-    println(s"External table created: ${tableName}_snappy")
+    tableSchema
   }
 }
