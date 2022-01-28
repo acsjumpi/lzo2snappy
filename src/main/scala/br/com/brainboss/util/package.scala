@@ -15,22 +15,22 @@ package object util {
     val conf = ConfigFactory.load()
     val builder = SparkSession
       .builder()
-      .master(conf.getString("submit.master"))
-      .config("spark.sql.catalogImplementation", conf.getString("submit.catalog"))
+      .master(conf.getString("master"))
+      .config("spark.sql.catalogImplementation", conf.getString("catalog"))
     
-    if (conf.getString("submit.catalog").equals("hive")) {
-      if (conf.getBoolean("submit.kerberized")) {
-        builder.config("spark.hadoop.hive.metastore.uris", conf.getString("submit.metastore_uri"))
-          .config("spark.hadoop.hive.metastore.sasl.enabled", conf.getString("submit.kerberized"))
-          .config("spark.hadoop.hive.metastore.kerberos.principal", conf.getString("submit.principal"))
-          .config("spark.driver.extraLibraryPath", conf.getString("submit.extraLibraryPath"))
-          .config("spark.executor.extraLibraryPath", conf.getString("submit.extraLibraryPath"))
+    if (conf.getString("catalog").equals("hive")) {
+      if (conf.getBoolean("kerberized")) {
+        builder.config("spark.hadoop.hive.metastore.uris", conf.getString("metastore_uri"))
+          .config("spark.hadoop.hive.metastore.sasl.enabled", conf.getString("kerberized"))
+          .config("spark.hadoop.hive.metastore.kerberos.principal", conf.getString("principal"))
+          .config("spark.driver.extraLibraryPath", conf.getString("extraLibraryPath"))
+          .config("spark.executor.extraLibraryPath", conf.getString("extraLibraryPath"))
           .appName("lzodf")
           .getOrCreate()
       } else {
-        builder.config("spark.hadoop.hive.metastore.uris", conf.getString("submit.metastore_uri"))
-          .config("spark.driver.extraLibraryPath", conf.getString("submit.extraLibraryPath"))
-          .config("spark.executor.extraLibraryPath", conf.getString("submit.extraLibraryPath"))
+        builder.config("spark.hadoop.hive.metastore.uris", conf.getString("metastore_uri"))
+          .config("spark.driver.extraLibraryPath", conf.getString("extraLibraryPath"))
+          .config("spark.executor.extraLibraryPath", conf.getString("extraLibraryPath"))
           .appName("lzodf")
           .getOrCreate()
       }
