@@ -1,14 +1,45 @@
 package br.com.brainboss
 
 import br.com.brainboss.lzodf.hashUdf
+import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.spark.sql.functions.{col, concat_ws, sum, udf}
-import org.apache.spark.sql.{Column, SparkSession}
-import scala.util.hashing.MurmurHash3
+import org.apache.spark.sql.functions.{concat_ws, sum}
+import org.apache.spark.sql.{Column, Row, SparkSession}
+
 import java.net.URI
+import scala.util.hashing.MurmurHash3
 
 package object util {
+  def startSession(): SparkSession = {
+    val conf = ConfigFactory.load()
+    val builder = SparkSession
+      .builder()
+      .master(conf.getString("master"))
+      .config("spark.sql.catalogImplementation", conf.getString("catalog"))
+    
+    if (conf.getString("catalog").equals("hive")) {
+      if (conf.getBoolean("kerberized")) {
+        builder.config("spark.hadoop.hive.metastore.uris", conf.getString("metastore_uri"))
+          .config("spark.hadoop.hive.metastore.sasl.enabled", conf.getString("kerberized"))
+          .config("spark.hadoop.hive.metastore.kerberos.principal", conf.getString("principal"))
+          .config("spark.driver.extraLibraryPath", conf.getString("extraLibraryPath"))
+          .config("spark.executor.extraLibraryPath", conf.getString("extraLibraryPath"))
+          .appName("lzodf")
+          .getOrCreate()
+      } else {
+        builder.config("spark.hadoop.hive.metastore.uris", conf.getString("metastore_uri"))
+          .config("spark.driver.extraLibraryPath", conf.getString("extraLibraryPath"))
+          .config("spark.executor.extraLibraryPath", conf.getString("extraLibraryPath"))
+          .appName("lzodf")
+          .getOrCreate()
+      }
+    } else {
+      builder.appName("lzodf")
+        .getOrCreate()
+    }
+  }
+  
   // Auxiliary function to guarantee only positive hash from MurmurHash3 return
   def positiveHash(h: Int): Int = {
     if (h < 0) -1 * (h + 1) else h
@@ -20,8 +51,8 @@ package object util {
     positiveHash(hash)
   }
 
-  def hashAndSum(ss: SparkSession, tableName: String, columns: Array[Column]): Long ={
-    ss.sql(s"SELECT * FROM ${tableName}")
+  def hashAndSum(spark: SparkSession, tableName: String, columns: Array[Column]): Long ={
+    spark.sql(s"SELECT * FROM $tableName")
       .withColumn("checksum", hashUdf(concat_ws(",", columns:_*)))
       .select(sum("checksum") as "hash_sum")
       .head()
@@ -30,19 +61,40 @@ package object util {
   
   def getOutputFile(outputPath: String, tableName: String): String = {
     if (outputPath.last.equals('/'))
-      s"$outputPath${tableName}_snappy"
+      s"$outputPath${tableName.split('.').last}_snappy"
     else
-      s"$outputPath/${tableName}_snappy"
+      s"$outputPath/${tableName.split('.').last}_snappy"
   }
   
-  def rollback(ss: SparkSession, tableName: String, path: String, conf: Configuration): Unit = {
+  def getTableSchema(spark: SparkSession, tableName: String): Array[Row] = {
+    spark.sql(s"DESCRIBE $tableName").collect()
+  }
+
+  def createTable (spark: SparkSession, tableSchema: Array[Row], tableName:String,
+                   outputPath:String) = {
+
+    // get table fields from generated schema
+    val tableFields = tableSchema.map(r=>s"${r.get(0)} ${r.get(1)}").mkString(",")
+
+    // create parquet/snappy external table using collected table fields
+    spark.sql(
+      s"""CREATE EXTERNAL TABLE ${tableName}_snappy (${tableFields})
+         |STORED AS PARQUET
+         |LOCATION '${outputPath}'
+         |TBLPROPERTIES (\"parquet.compression\"=\"SNAPPY\")
+         |""".stripMargin)
+
+    println(s"External table created: ${tableName}_snappy")
+  }
+  
+  def rollback(spark: SparkSession, tableName: String, path: String, conf: Configuration): Unit = {
     val fs = FileSystem.get(URI.create(path), conf)
     
     if (fs.exists(new Path(path))) {
       fs.delete(new Path(path), true)
     }
     
-    ss.sql(s"DROP TABLE IF EXISTS ${tableName}_snappy")
+    spark.sql(s"DROP TABLE IF EXISTS ${tableName}_snappy")
   }
 
   case class IncompatibleTablesException(s: String) extends Exception(s)
