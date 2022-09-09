@@ -2,19 +2,22 @@ package br.com.brainboss.lzodf
 
 import br.com.brainboss.util._
 import org.apache.spark.sql.functions.{col, concat_ws, sum}
+import org.slf4j.{Logger, LoggerFactory}
 
 object lzodf extends App {
   val usage = """
-    Usage: lzodf <parquet/snappy file destination> <original table name>
+    Usage: lzodf <parquet/snappy file destination> <original database> <original table name>
   """
-
+  lazy val LOGGER: Logger = LoggerFactory.getLogger(lzodf.getClass)
   if (args.length < 2)
     println(usage)
   else {
     val spark = startSession()
 
     val outputPath = args(0)
-    val tableName = args(1)
+    val db = args(1)
+    val table = args(2)
+    val tableName = s"$db.$table"
     val outputFile = getOutputFile(outputPath, tableName)
 
     try {
@@ -27,7 +30,8 @@ object lzodf extends App {
       val hashSum = hashColumns.select(sum("checksum") as "hash_sum").head().getAs[Long]("hash_sum")
 
       val tableSchema = getTableSchema(spark, tableName)
-      createTable(spark, tableSchema, tableName, outputFile)
+      //createTable(spark, tableSchema, tableName, outputFile)
+      mkCreateTable(spark, db, table, outputFile, LOGGER)
 
       df
         .write.mode(org.apache.spark.sql.SaveMode.Overwrite)

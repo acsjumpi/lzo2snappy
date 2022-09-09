@@ -6,6 +6,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.functions.{concat_ws, sum}
 import org.apache.spark.sql.{Column, Row, SparkSession}
+import org.slf4j.{Logger, LoggerFactory}
 
 import java.net.URI
 import scala.util.hashing.MurmurHash3
@@ -67,7 +68,26 @@ package object util {
   }
   
   def getTableSchema(spark: SparkSession, tableName: String): Array[Row] = {
-    spark.sql(s"DESCRIBE $tableName").collect()
+    val numColumns = spark.sql(s"SHOW COLUMNS IN $tableName").collect().length
+    spark.sql(s"DESCRIBE $tableName").collect().slice(0, numColumns)
+  }
+
+  def mkCreateTable(spark: SparkSession, db: String, table: String, outputPath:String, LOGGER:Logger) = {
+    val createtabstmt = spark.sql(s"SHOW CREATE TABLE $db.$table").collect().head.getString(0)
+    LOGGER.warn(createtabstmt)
+    val until = createtabstmt.indexOf("ROW FORMAT SERDE")
+    val newstmt = createtabstmt.slice(0, until).replace(s"`$db`.`$table`(", s"`$db`.`${table}_snappy`(")
+    LOGGER.warn(s"""$newstmt STORED AS PARQUET
+                   |LOCATION '${outputPath}'
+                   |TBLPROPERTIES (\"parquet.compression\"=\"SNAPPY\")
+                   |""".stripMargin)
+    spark.sql(
+      s"""$newstmt STORED AS PARQUET
+         |LOCATION '${outputPath}'
+         |TBLPROPERTIES (\"parquet.compression\"=\"SNAPPY\")
+         |""".stripMargin)
+
+    println(s"External table created: $db.${table}_snappy")
   }
 
   def createTable (spark: SparkSession, tableSchema: Array[Row], tableName:String,
