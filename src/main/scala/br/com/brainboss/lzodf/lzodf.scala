@@ -26,28 +26,40 @@ object lzodf extends App {
 
       val hashColumns = df.withColumn("checksum", hashUdf(concat_ws(",", columns:_*)))
       //TODO - Need to implement log level to show checksum column
-      //hashColumns.show(10)
+
+//      hashColumns.show(10)
       val hashSum = hashColumns.select(sum("checksum") as "hash_sum").head().getAs[Long]("hash_sum")
 
-      val tableSchema = getTableSchema(spark, tableName)
+      //val tableSchema = getTableSchema(spark, tableName)
       //createTable(spark, tableSchema, tableName, outputFile)
-      mkCreateTable(spark, db, table, outputFile, LOGGER)
+      val partitions = mkCreateTable(spark, db, table, outputFile, LOGGER)
 
-      df
-        .write.mode(org.apache.spark.sql.SaveMode.Overwrite)
-        .option("compression", "snappy")
-        .option("path", outputFile)
-        .format("parquet")
-        .save()
+      partitions.foreach(LOGGER.warn)
+      if(partitions.isEmpty)
+        df
+          .write.mode(org.apache.spark.sql.SaveMode.Overwrite)
+          .option("compression", "snappy")
+          .option("path", outputFile)
+          .format("parquet")
+          .save()
+      else
+        df
+          .write.mode(org.apache.spark.sql.SaveMode.Overwrite)
+          .partitionBy(partitions:_*)
+          .option("compression", "snappy")
+          .option("path", outputFile)
+          .format("parquet")
+          .saveAsTable(s"${tableName}_snappy")
 
-      val hashSumSnappy = hashAndSum(spark, s"${tableName}_snappy", columns)
+
+      val hashSumSnappy = hashAndSum(spark, s"${tableName}_snappy", columns, LOGGER)
 
       if (hashSum != hashSumSnappy) {
         throw IncompatibleTablesException("LZO and Snappy tables are incompatible. Rolling back changes.")
       }
     } catch {
       case e: Exception => {
-        rollback(spark, tableName, outputFile, spark.sparkContext.hadoopConfiguration)
+        //rollback(spark, tableName, outputFile, spark.sparkContext.hadoopConfiguration)
         e.printStackTrace()
       }
     } finally {

@@ -35,7 +35,7 @@ object lzordd extends App {
       mkCreateTable(spark, db, table, outputFile, LOGGER)
 
       val columns = tableSchema.map(field => col(field.getAs[String](0)))
-      val hashSumSnappy = hashAndSum(spark, s"${tableName}_snappy", columns)
+      val hashSumSnappy = hashAndSum(spark, s"${tableName}_snappy", columns, LOGGER)
 
       if (hashSum != hashSumSnappy) {
         throw IncompatibleTablesException("LZO and Snappy tables are incompatible. Rolling back changes.")

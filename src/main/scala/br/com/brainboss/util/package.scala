@@ -1,6 +1,7 @@
 package br.com.brainboss
 
 import br.com.brainboss.lzodf.hashUdf
+import br.com.brainboss.lzodf.lzodf.LOGGER
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -52,9 +53,11 @@ package object util {
     positiveHash(hash)
   }
 
-  def hashAndSum(spark: SparkSession, tableName: String, columns: Array[Column]): Long ={
-    spark.sql(s"SELECT * FROM $tableName")
-      .withColumn("checksum", hashUdf(concat_ws(",", columns:_*)))
+  def hashAndSum(spark: SparkSession, tableName: String, columns: Array[Column], LOGGER: Logger): Long ={
+    val df = spark.sql(s"SELECT * FROM $tableName")
+    LOGGER.warn(s"DFNEW SHOW $tableName")
+    df.show(10)
+      df.withColumn("checksum", hashUdf(concat_ws(",", columns:_*)))
       .select(sum("checksum") as "hash_sum")
       .head()
       .getAs[Long]("hash_sum")
@@ -72,15 +75,11 @@ package object util {
     spark.sql(s"DESCRIBE $tableName").collect().slice(0, numColumns)
   }
 
-  def mkCreateTable(spark: SparkSession, db: String, table: String, outputPath:String, LOGGER:Logger) = {
+  def mkCreateTable(spark: SparkSession, db: String, table: String, outputPath:String, LOGGER:Logger): List[String] = {
     val createtabstmt = spark.sql(s"SHOW CREATE TABLE $db.$table").collect().head.getString(0)
-    LOGGER.warn(createtabstmt)
     val until = createtabstmt.indexOf("ROW FORMAT SERDE")
     val newstmt = createtabstmt.slice(0, until).replace(s"`$db`.`$table`(", s"`$db`.`${table}_snappy`(")
-    LOGGER.warn(s"""$newstmt STORED AS PARQUET
-                   |LOCATION '${outputPath}'
-                   |TBLPROPERTIES (\"parquet.compression\"=\"SNAPPY\")
-                   |""".stripMargin)
+
     spark.sql(
       s"""$newstmt STORED AS PARQUET
          |LOCATION '${outputPath}'
@@ -88,6 +87,14 @@ package object util {
          |""".stripMargin)
 
     println(s"External table created: $db.${table}_snappy")
+
+    if(newstmt.contains("PARTITIONED BY")){
+      val from = newstmt.indexOf("PARTITIONED BY")
+      val partitions = newstmt.slice(from, newstmt.length)
+      val pattern = "(?<=`).*(?=`)".r
+      pattern.findAllIn(partitions).toList
+    }else
+      List.empty
   }
 
   def createTable (spark: SparkSession, tableSchema: Array[Row], tableName:String,
