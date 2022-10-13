@@ -1,0 +1,6 @@
+master = yarn
+catalog = hive
+metastore_uri = "thrift://host:9083"
+kerberized = true
+principal = "hive/_HOST@REALM"
+extraLibraryPath = /opt/cloudera/parcels/GPLEXTRAS/lib/hadoop/lib/native
