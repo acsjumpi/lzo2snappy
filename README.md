@@ -33,6 +33,7 @@ RDD execution example:
 ```
 $ spark-submit --jars /opt/cloudera/parcels/GPLEXTRAS/jars/hadoop-lzo.jar --class br.com.brainboss.lzordd.lzordd l2s.jar /user/hive/warehouse/hive_lzo /user/hive/warehouse/hive_lzo_snappy default hive_lzo ,
 ```
+The resulting table will be named `<original table name>_snappy`
 
 ### Dataframe strategy
 
@@ -53,6 +54,7 @@ Dataframe execution example:
 ```
 $ spark-submit --jars /opt/cloudera/parcels/GPLEXTRAS/jars/hadoop-lzo.jar --class br.com.brainboss.lzodf.lzodf l2s.jar /user/hive/warehouse/hive_lzo_snappy default hive_lzo
 ``` 
+The resulting table will be named `<original table name>_snappy`
 
 ### Configuration file
 
