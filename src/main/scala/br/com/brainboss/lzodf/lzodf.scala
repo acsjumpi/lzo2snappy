@@ -59,7 +59,7 @@ object lzodf extends App {
       }
     } catch {
       case e: Exception => {
-        //rollback(spark, tableName, outputFile, spark.sparkContext.hadoopConfiguration)
+        rollback(spark, tableName, outputFile, spark.sparkContext.hadoopConfiguration)
         e.printStackTrace()
       }
     } finally {
